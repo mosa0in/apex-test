@@ -308,6 +308,17 @@
   .coach-typing span:nth-child(2) { animation-delay: 0.2s; }
   .coach-typing span:nth-child(3) { animation-delay: 0.4s; }
 
+  /* AI & Strategy bubbles inside chat */
+  .coach-bubble-ai {
+    border-right: 3px solid rgba(111, 209, 215, 0.5) !important;
+    background: rgba(111, 209, 215, 0.08) !important;
+  }
+
+  .coach-bubble-strategy {
+    border-right: 3px solid rgba(90, 246, 214, 0.4) !important;
+    background: rgba(90, 246, 214, 0.06) !important;
+  }
+
   .coach-panel-footer {
     @apply px-4 py-3 shrink-0;
     border-top: 1px solid rgba(140, 237, 243, 0.1);

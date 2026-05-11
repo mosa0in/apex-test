@@ -10,7 +10,7 @@ import SolutionView from './components/SolutionView';
 import { SessionEndSummary, Modal } from './components/Modals';
 import BrainstormingView from './components/BrainstormingView';
 import CoachPanel from './components/CoachPanel';
-import { getCoachExplanation, aiRephraseQuestion, isAIAvailable } from './services/ai';
+import { aiRephraseQuestion, isAIAvailable } from './services/ai';
 import { 
   RefreshCcw, SupportAgent, PsychologyAlt, Lightbulb, Check, ArrowRight,
   Flag, SentimentSatisfied, SentimentNeutral, SentimentDissatisfied,
@@ -32,7 +32,7 @@ function AppContent() {
   const { state, isCheckpoint, isLastQuestion, nextQuestion, setFeedbackLevel, markHintUsed, markCoachUsed, markRephraseUsed, markRestRequested, resetSession, showToast, currentQuestion, setAICoachResponse, setAILoading } = session;
 
   const [appState, setAppState] = useState<AppState>('start');
-  const [modalType, setModalType] = useState<'none' | 'regeneration' | 'coach_ai' | 'hint' | 'break'>('none');
+  const [modalType, setModalType] = useState<'none' | 'regeneration' | 'hint' | 'break'>('none');
   const [coachPanelOpen, setCoachPanelOpen] = useState(false);
 
   React.useEffect(() => {
@@ -78,37 +78,6 @@ function AppContent() {
       setModalType('none');
     }
   }, [currentQuestion, markRephraseUsed, showToast, state.currentRephraseCount]);
-
-  // Called from CoachPanel when user selects a help type (start, concept, difficulty)
-  const handleCoachSelect = useCallback(async (helpType: string) => {
-    if (!currentQuestion) return;
-    markCoachUsed(helpType);
-    setCoachPanelOpen(false);
-    
-    if (isAIAvailable()) {
-      setAILoading(true);
-      setModalType('coach_ai');
-      try {
-        const response = await getCoachExplanation(currentQuestion, helpType);
-        setAICoachResponse(response);
-      } catch {
-        setAICoachResponse('عذراً، لم أتمكن من الوصول للكوتش الآن. جرّب الاستراتيجيات المتاحة! 💪');
-      }
-    } else {
-      setAppState('strategies');
-    }
-  }, [currentQuestion, markCoachUsed, setAICoachResponse, setAILoading]);
-
-  // Called from CoachPanel when user selects a strategy (brainstorming, error, simpler, etc.)
-  const handleStrategyFromPanel = useCallback((strategy: string) => {
-    setCoachPanelOpen(false);
-    if (strategy === 'puzzle') setAppState('puzzle');
-    else if (strategy === 'simpler') setAppState('simpler_example');
-    else if (strategy === 'error') setAppState('find_error');
-    else if (strategy === 'conceptual') setAppState('conceptual');
-    else if (strategy === 'solution') setAppState('solution');
-    else if (strategy === 'brainstorming') setAppState('brainstorming');
-  }, []);
 
   const handleShowHint = () => { markHintUsed(); setModalType('hint'); };
   const handleEndSession = () => setAppState('summary');
@@ -162,8 +131,8 @@ function AppContent() {
       <CoachPanel
         isOpen={coachPanelOpen}
         onClose={() => setCoachPanelOpen(false)}
-        onCoachSelect={handleCoachSelect}
-        onSelectStrategy={handleStrategyFromPanel}
+        currentQuestion={currentQuestion}
+        onMarkCoachUsed={markCoachUsed}
       />
 
       {/* Hint Modal */}
@@ -175,38 +144,6 @@ function AppContent() {
             <div className="text-2xl tracking-widest">{currentQuestion?.hint.stepContent}</div>
           </div>
           <button onClick={() => setModalType('none')} className="btn-primary w-full py-3 rounded-xl"><Check className="w-5 h-5" />فهمت</button>
-        </div>
-      </Modal>
-
-      {/* AI Coach Response Modal */}
-      <Modal isOpen={modalType === 'coach_ai'} onClose={() => { setModalType('none'); setAICoachResponse(null); }} title="APEX Coach" icon={<SmartToy className="w-5 h-5 text-primary" />}>
-        <div className="flex flex-col gap-5">
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center shrink-0 shadow-[0_0_20px_rgba(111,209,215,0.3)]">
-              <SmartToy className="w-6 h-6 text-primary" />
-            </div>
-            <div className="flex-1">
-              {state.aiLoading ? (
-                <div className="glass-card rounded-xl p-4">
-                  <div className="typing-indicator"><span /><span /><span /></div>
-                  <p className="text-xs text-on-surface-variant text-center mt-2">الكوتش يفكر...</p>
-                </div>
-              ) : (
-                <div className="glass-card rounded-xl p-5 border-primary/30">
-                  <div className="ai-badge mb-3">✨ AI Response</div>
-                  <p className="text-on-surface leading-relaxed whitespace-pre-wrap">{state.aiCoachResponse}</p>
-                </div>
-              )}
-            </div>
-          </div>
-          <div className="flex gap-3">
-            <button onClick={() => { setModalType('none'); setAICoachResponse(null); setAppState('strategies'); }} className="flex-1 py-3 rounded-xl bg-surface-container-highest border border-primary/20 text-on-surface hover:bg-surface-bright transition-all font-bold">
-              استراتيجيات إضافية
-            </button>
-            <button onClick={() => { setModalType('none'); setAICoachResponse(null); }} className="flex-1 btn-primary py-3 rounded-xl">
-              فهمت، شكراً! 👍
-            </button>
-          </div>
         </div>
       </Modal>
 
