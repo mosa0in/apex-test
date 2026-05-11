@@ -48,13 +48,14 @@ export default function MainQuestion({ onNext, onShowHint, onShowSolution, onCal
   const [isSaved, setIsSaved] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
+  const [resultRevealed, setResultRevealed] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     setElapsed(0); setSelectedOption(null); setIsSubmitted(false); setIsCorrect(false);
-    setConfidence(0); setReflection(''); setIsSaved(false); setShowConfetti(false);
+    setResultRevealed(false); setConfidence(0); setReflection(''); setIsSaved(false); setShowConfetti(false);
     timerRef.current = setInterval(() => setElapsed(p => p + 1), 1000);
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [state.currentQuestionIndex]);
@@ -66,13 +67,13 @@ export default function MainQuestion({ onNext, onShowHint, onShowSolution, onCal
       if (!isSubmitted) {
         if (e.key >= '1' && e.key <= '4') { setSelectedOption(parseInt(e.key) - 1); setInputModality('keyboard'); e.preventDefault(); }
         if (e.key === 'Enter' && selectedOption !== null && reflection.trim()) { handleSubmit(); e.preventDefault(); }
-      } else if (confidence > 0) {
+      } else if (resultRevealed) {
         if (e.key === 'Enter' || e.key === ' ') { onNext(); e.preventDefault(); }
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [isSubmitted, selectedOption, state.currentQuestionIndex, confidence]);
+  }, [isSubmitted, selectedOption, state.currentQuestionIndex, confidence, resultRevealed]);
 
   const formatTime = (secs: number) => `${Math.floor(secs / 60).toString().padStart(2, '0')}:${(secs % 60).toString().padStart(2, '0')}`;
 
@@ -81,22 +82,34 @@ export default function MainQuestion({ onNext, onShowHint, onShowSolution, onCal
     const correct = selectedOption === currentQuestion.correctIndex;
     setIsCorrect(correct);
     setIsSubmitted(true);
-    if (correct) setShowConfetti(true);
+    // Don't reveal result yet — wait for confidence
     if (timerRef.current) clearInterval(timerRef.current);
-    // Submit with question's built-in difficulty, confidence will be updated when user selects it
-    submitResponse({ selectedAnswer: currentQuestion.options[selectedOption].content, selectedIndex: selectedOption, isCorrect: correct, confidence: 3, difficulty: currentQuestion.difficulty, reflection });
-    if (correct) setTimeout(() => setShowConfetti(false), 3000);
-  }, [selectedOption, currentQuestion, reflection, submitResponse]);
+  }, [selectedOption, currentQuestion, reflection]);
 
-  // Update confidence in the last response when user selects it post-answer
   const handleConfidenceSelect = useCallback((val: number) => {
     setConfidence(val);
-    // Update the last response's confidence
-    if (state.responses.length > 0) {
+    // Now reveal the result and submit the response
+    if (!resultRevealed && currentQuestion && selectedOption !== null) {
+      setResultRevealed(true);
+      const correct = selectedOption === currentQuestion.correctIndex;
+      if (correct) {
+        setShowConfetti(true);
+        setTimeout(() => setShowConfetti(false), 3000);
+      }
+      submitResponse({
+        selectedAnswer: currentQuestion.options[selectedOption].content,
+        selectedIndex: selectedOption,
+        isCorrect: correct,
+        confidence: val,
+        difficulty: currentQuestion.difficulty,
+        reflection
+      });
+    } else if (state.responses.length > 0) {
+      // Update confidence if already revealed (user changed mind)
       const lastResp = state.responses[state.responses.length - 1];
       lastResp.confidence = val;
     }
-  }, [state.responses]);
+  }, [state.responses, resultRevealed, currentQuestion, selectedOption, reflection, submitResponse]);
 
   if (!currentQuestion) return null;
 
@@ -155,27 +168,20 @@ export default function MainQuestion({ onNext, onShowHint, onShowSolution, onCal
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3" role="radiogroup" aria-label="خيارات الإجابة">
               {currentQuestion.options.map((opt, idx) => (
-                <OptionBtn key={idx} label={opt.label} content={opt.content} shortcut={idx + 1} selected={selectedOption === idx} disabled={isSubmitted} isCorrectAnswer={isSubmitted && idx === currentQuestion.correctIndex} isWrongAnswer={isSubmitted && selectedOption === idx && idx !== currentQuestion.correctIndex} onClick={() => { if (!isSubmitted) { setSelectedOption(idx); setInputModality('mouse'); } }} />
+                <OptionBtn key={idx} label={opt.label} content={opt.content} shortcut={idx + 1} selected={selectedOption === idx} disabled={isSubmitted} isCorrectAnswer={resultRevealed && idx === currentQuestion.correctIndex} isWrongAnswer={resultRevealed && selectedOption === idx && idx !== currentQuestion.correctIndex} onClick={() => { if (!isSubmitted) { setSelectedOption(idx); setInputModality('mouse'); } }} />
               ))}
             </div>
 
-            {isSubmitted && (
-              <div className={`mt-6 p-4 rounded-xl flex items-center justify-center gap-3 text-lg font-bold ${isCorrect ? 'bg-tertiary/15 text-tertiary border border-tertiary/30' : 'bg-error/15 text-error border border-error/30'}`} role="alert" style={{ animation: 'page-enter 0.3s ease-out' }}>
-                {isCorrect ? <CheckCircle className="w-6 h-6" /> : <XCircle className="w-6 h-6" />}
-                {isCorrect ? 'إجابة صحيحة! أحسنت 🎉' : `إجابة خاطئة. الصحيحة: ${currentQuestion.options[currentQuestion.correctIndex].content}`}
-              </div>
-            )}
-
-            {/* Post-Answer Confidence Card */}
-            {isSubmitted && (
-              <div className="confidence-card">
+            {/* Post-Submit Confidence Card (BEFORE result reveal) */}
+            {isSubmitted && !resultRevealed && (
+              <div className="confidence-card" style={{ animation: 'page-enter 0.4s ease-out' }}>
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-9 h-9 rounded-lg bg-primary/15 flex items-center justify-center">
                     <PsychologyAlt className="w-5 h-5 text-primary" />
                   </div>
                   <div className="text-right">
-                    <h3 className="text-base font-bold text-on-surface">قديش كنت واثق من إجابتك؟</h3>
-                    <p className="text-xs text-on-surface-variant">اختر مستوى ثقتك قبل ما تنتقل للسؤال التالي</p>
+                    <h3 className="text-base font-bold text-on-surface">قبل ما نكشف النتيجة...</h3>
+                    <p className="text-xs text-on-surface-variant">قديش كنت واثق من إجابتك؟</p>
                   </div>
                 </div>
                 <div className="flex justify-between items-center gap-2 mb-3">
@@ -195,6 +201,14 @@ export default function MainQuestion({ onNext, onShowHint, onShowSolution, onCal
                     {CONFIDENCE_LABELS[confidence - 1]}
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Result Reveal (AFTER confidence selection) */}
+            {resultRevealed && (
+              <div className={`mt-6 p-4 rounded-xl flex items-center justify-center gap-3 text-lg font-bold ${isCorrect ? 'bg-tertiary/15 text-tertiary border border-tertiary/30' : 'bg-error/15 text-error border border-error/30'}`} role="alert" style={{ animation: 'page-enter 0.3s ease-out' }}>
+                {isCorrect ? <CheckCircle className="w-6 h-6" /> : <XCircle className="w-6 h-6" />}
+                {isCorrect ? 'إجابة صحيحة! أحسنت 🎉' : `إجابة خاطئة. الصحيحة: ${currentQuestion.options[currentQuestion.correctIndex].content}`}
               </div>
             )}
 
@@ -257,8 +271,8 @@ export default function MainQuestion({ onNext, onShowHint, onShowSolution, onCal
               )}
             </>
           ) : (
-            <button onClick={onNext} disabled={confidence === 0} className="btn-primary px-12 py-3 rounded-xl text-base w-full md:w-auto disabled:opacity-50 disabled:cursor-not-allowed" aria-label="التالي (Enter)">
-              {confidence === 0 ? 'اختر مستوى ثقتك أولاً' : 'التالي'}<ArrowLeft className="w-4 h-4" />
+            <button onClick={onNext} disabled={!resultRevealed} className="btn-primary px-12 py-3 rounded-xl text-base w-full md:w-auto disabled:opacity-50 disabled:cursor-not-allowed" aria-label="التالي (Enter)">
+              {!resultRevealed ? 'اختر ثقتك لكشف النتيجة' : 'التالي'}<ArrowLeft className="w-4 h-4" />
             </button>
           )}
           <button onClick={onEndSession} className="text-error/60 hover:text-error text-xs py-1 px-4 rounded transition-all">إنهاء الجلسة</button>
