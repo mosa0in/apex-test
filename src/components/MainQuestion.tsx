@@ -56,6 +56,7 @@ export default function MainQuestion({ onNext, onShowHint, onShowSolution, onCal
   // ── Speech-to-Text ──
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef<any>(null);
+  const baseTextRef = useRef(''); // text before recording started
 
   useEffect(() => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -65,18 +66,19 @@ export default function MainQuestion({ onNext, onShowHint, onShowSolution, onCal
     recognition.interimResults = true;
     recognition.continuous = true;
     recognition.onresult = (event: any) => {
-      let transcript = '';
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        transcript += event.results[i][0].transcript;
-      }
-      setReflection(prev => {
-        // Replace only the interim part
-        const base = prev.replace(/\s*\[\.\.\.]$/, '');
-        if (event.results[event.results.length - 1].isFinal) {
-          return (base ? base + ' ' : '') + transcript;
+      // Rebuild full transcript from ALL results
+      let finalText = '';
+      let interimText = '';
+      for (let i = 0; i < event.results.length; i++) {
+        if (event.results[i].isFinal) {
+          finalText += event.results[i][0].transcript;
+        } else {
+          interimText += event.results[i][0].transcript;
         }
-        return (base ? base + ' ' : '') + transcript + ' [...]';
-      });
+      }
+      const base = baseTextRef.current;
+      const spoken = (finalText + (interimText ? ' ' + interimText : '')).trim();
+      setReflection(base ? base + ' ' + spoken : spoken);
     };
     recognition.onerror = () => setIsListening(false);
     recognition.onend = () => setIsListening(false);
@@ -89,9 +91,9 @@ export default function MainQuestion({ onNext, onShowHint, onShowSolution, onCal
     if (isListening) {
       recognitionRef.current.stop();
       setIsListening(false);
-      // Clean up interim marker
-      setReflection(prev => prev.replace(/\s*\[\.\.\.]$/, ''));
     } else {
+      // Save current text as base before starting
+      setReflection(prev => { baseTextRef.current = prev; return prev; });
       recognitionRef.current.start();
       setIsListening(true);
     }
