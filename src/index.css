@@ -101,6 +101,16 @@
   50% { box-shadow: 0 0 20px rgba(255, 70, 70, 0.6), 0 0 40px rgba(255, 70, 70, 0.2); }
 }
 
+@keyframes mic-ring-pulse {
+  0% { transform: scale(1); opacity: 0.6; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+
+@keyframes stt-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
 @layer base {
   body {
     @apply bg-background text-on-surface antialiased;
@@ -365,6 +375,44 @@
     border-color: rgba(255, 70, 70, 0.8);
     transform: scale(1.05);
     box-shadow: 0 0 25px rgba(255, 70, 70, 0.5);
+  }
+
+  /* ===== Speech-to-Text ===== */
+  .stt-mic-btn {
+    @apply relative w-9 h-9 rounded-full flex items-center justify-center transition-all shrink-0;
+    background: rgba(0, 34, 56, 0.6);
+    border: 1.5px solid rgba(140, 237, 243, 0.2);
+    color: var(--color-primary);
+  }
+  .stt-mic-btn:hover {
+    background: rgba(111, 209, 215, 0.15);
+    border-color: rgba(111, 209, 215, 0.5);
+    transform: scale(1.08);
+  }
+  .stt-mic-active {
+    background: rgba(255, 70, 70, 0.2) !important;
+    border-color: rgba(255, 70, 70, 0.6) !important;
+    color: #ff6b6b !important;
+    animation: emergency-pulse 1.5s ease-in-out infinite;
+  }
+  .stt-mic-ring {
+    @apply absolute inset-0 rounded-full;
+    border: 2px solid rgba(255, 70, 70, 0.5);
+    animation: mic-ring-pulse 1.2s ease-out infinite;
+  }
+  .stt-status-bar {
+    @apply flex items-center gap-2 px-3 py-1.5 rounded-lg mb-2;
+    background: rgba(255, 70, 70, 0.08);
+    border: 1px solid rgba(255, 70, 70, 0.2);
+  }
+  .stt-dot {
+    @apply w-2 h-2 rounded-full shrink-0;
+    background: #ff4444;
+    animation: stt-blink 1s infinite;
+  }
+  .stt-textarea-active {
+    border-color: rgba(255, 70, 70, 0.4) !important;
+    box-shadow: 0 0 12px rgba(255, 70, 70, 0.1);
   }
 
   /* ===== Interactive Strategy Widgets ===== */

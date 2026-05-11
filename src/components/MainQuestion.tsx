@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useSession } from '../context/SessionContext';
-import { RefreshCcw, Coffee, SupportAgent, ArrowLeft, PsychologyAlt, Edit3, Lightbulb, Eye, Schedule, CheckCircle, XCircle, Send, AlertCircle } from './icons';
+import { RefreshCcw, Coffee, SupportAgent, ArrowLeft, PsychologyAlt, Edit3, Lightbulb, Eye, Schedule, CheckCircle, XCircle, Send, AlertCircle, Mic } from './icons';
 import { MAX_REPHRASE_PER_QUESTION } from '../context/SessionContext';
 
 interface MainQuestionProps {
@@ -43,7 +43,7 @@ const CONFIDENCE_LABELS = ['مش متأكد خالص', 'شبه مش متأكد',
 export default function MainQuestion({ onNext, onShowHint, onShowSolution, onCallCoach, onRephrase, onTakeBreak, onEndSession, rephraseCount, rephraseExhausted }: MainQuestionProps) {
   const { state, currentQuestion, totalQuestions, submitResponse, setInputModality } = useSession();
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
-  const [confidence, setConfidence] = useState<number>(0); // 0 = not selected yet
+  const [confidence, setConfidence] = useState<number>(0);
   const [reflection, setReflection] = useState('');
   const [isSaved, setIsSaved] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -52,6 +52,50 @@ export default function MainQuestion({ onNext, onShowHint, onShowSolution, onCal
   const [showConfetti, setShowConfetti] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // ── Speech-to-Text ──
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef<any>(null);
+
+  useEffect(() => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) return;
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'ar-SA';
+    recognition.interimResults = true;
+    recognition.continuous = true;
+    recognition.onresult = (event: any) => {
+      let transcript = '';
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        transcript += event.results[i][0].transcript;
+      }
+      setReflection(prev => {
+        // Replace only the interim part
+        const base = prev.replace(/\s*\[\.\.\.]$/, '');
+        if (event.results[event.results.length - 1].isFinal) {
+          return (base ? base + ' ' : '') + transcript;
+        }
+        return (base ? base + ' ' : '') + transcript + ' [...]';
+      });
+    };
+    recognition.onerror = () => setIsListening(false);
+    recognition.onend = () => setIsListening(false);
+    recognitionRef.current = recognition;
+    return () => { try { recognition.stop(); } catch {} };
+  }, []);
+
+  const toggleListening = useCallback(() => {
+    if (!recognitionRef.current) return;
+    if (isListening) {
+      recognitionRef.current.stop();
+      setIsListening(false);
+      // Clean up interim marker
+      setReflection(prev => prev.replace(/\s*\[\.\.\.]$/, ''));
+    } else {
+      recognitionRef.current.start();
+      setIsListening(true);
+    }
+  }, [isListening]);
 
   useEffect(() => {
     setElapsed(0); setSelectedOption(null); setIsSubmitted(false); setIsCorrect(false);
@@ -228,8 +272,27 @@ export default function MainQuestion({ onNext, onShowHint, onShowSolution, onCal
         {/* Right Column - Only Reflection */}
         <div className="lg:col-span-4 flex flex-col gap-4">
           <div className="glass-card rounded-2xl p-4 flex-grow flex flex-col">
-            <h3 className="text-base font-bold flex items-center gap-2 mb-3"><Edit3 className="w-5 h-5 text-primary" />اشرح كيف فكرت: <span className="text-error text-xs font-normal">(مطلوب)</span></h3>
-            <textarea value={reflection} onChange={(e) => setReflection(e.target.value)} readOnly={isSaved || isSubmitted} className={`w-full flex-grow bg-surface-container/50 border-0 border-b border-primary/30 focus:border-primary focus:ring-0 text-on-surface p-3 rounded-t-xl resize-none placeholder:text-on-surface-variant/50 text-sm ${(isSaved || isSubmitted) ? 'opacity-70' : ''}`} placeholder="اشرح بجملة واحدة: كيف فكّرت بالحل؟ (مثال: طرحت 5 من الطرفين ثم قسمت)" aria-label="شرح طريقة التفكير" />
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-base font-bold flex items-center gap-2"><Edit3 className="w-5 h-5 text-primary" />اشرح كيف فكرت: <span className="text-error text-xs font-normal">(مطلوب)</span></h3>
+              {!isSaved && !isSubmitted && recognitionRef.current && (
+                <button
+                  onClick={toggleListening}
+                  className={`stt-mic-btn ${isListening ? 'stt-mic-active' : ''}`}
+                  aria-label={isListening ? 'إيقاف التسجيل' : 'تسجيل صوتي'}
+                  title={isListening ? 'إيقاف التسجيل' : 'اضغط للتحدث'}
+                >
+                  <Mic className="w-4 h-4" />
+                  {isListening && <span className="stt-mic-ring" />}
+                </button>
+              )}
+            </div>
+            {isListening && (
+              <div className="stt-status-bar">
+                <span className="stt-dot" />
+                <span className="text-[10px] text-error font-bold">جاري التسجيل... تحدث الآن</span>
+              </div>
+            )}
+            <textarea value={reflection} onChange={(e) => setReflection(e.target.value)} readOnly={isSaved || isSubmitted} className={`w-full flex-grow bg-surface-container/50 border-0 border-b border-primary/30 focus:border-primary focus:ring-0 text-on-surface p-3 rounded-t-xl resize-none placeholder:text-on-surface-variant/50 text-sm ${(isSaved || isSubmitted) ? 'opacity-70' : ''} ${isListening ? 'stt-textarea-active' : ''}`} placeholder="اشرح بجملة واحدة: كيف فكّرت بالحل؟ (مثال: طرحت 5 من الطرفين ثم قسمت) — أو اضغط 🎤" aria-label="شرح طريقة التفكير" />
             {!isSubmitted && (
               <div className="mt-2 flex justify-end">
                 {isSaved ? (
