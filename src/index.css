@@ -366,4 +366,140 @@
     transform: scale(1.05);
     box-shadow: 0 0 25px rgba(255, 70, 70, 0.5);
   }
+
+  /* ===== Interactive Strategy Widgets ===== */
+  .strat-step-card {
+    @apply flex items-start gap-2.5 p-3 rounded-xl cursor-pointer transition-all;
+    background: rgba(0, 34, 56, 0.5);
+    border: 1px solid rgba(140, 237, 243, 0.1);
+  }
+  .strat-step-card:hover { border-color: rgba(140, 237, 243, 0.3); }
+  .strat-step-revealed {
+    border-color: rgba(111, 209, 215, 0.3) !important;
+    background: rgba(111, 209, 215, 0.08) !important;
+  }
+  .strat-step-hidden { @apply opacity-60; }
+  .strat-step-num {
+    @apply w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0;
+    background: rgba(111, 209, 215, 0.2);
+    color: var(--color-primary);
+    border: 1px solid rgba(111, 209, 215, 0.3);
+  }
+
+  .strat-math-block {
+    @apply text-xs font-mono mt-1.5 px-2.5 py-1.5 rounded-lg text-center;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(140, 237, 243, 0.1);
+    color: rgba(140, 237, 243, 0.9);
+    direction: ltr;
+  }
+
+  .strat-tip-card {
+    @apply p-3 rounded-xl text-xs font-bold;
+    background: rgba(111, 209, 215, 0.08);
+    border: 1px solid rgba(111, 209, 215, 0.2);
+    color: var(--color-primary);
+  }
+
+  .strat-flow-card {
+    @apply flex items-start gap-2.5 p-3 rounded-xl;
+    background: rgba(0, 34, 56, 0.4);
+    border: 1px solid rgba(140, 237, 243, 0.15);
+  }
+  .strat-flow-icon {
+    @apply w-8 h-8 rounded-lg flex items-center justify-center shrink-0;
+    background: linear-gradient(135deg, rgba(111, 209, 215, 0.25), rgba(90, 246, 214, 0.15));
+    border: 1px solid rgba(111, 209, 215, 0.3);
+    color: var(--color-primary);
+  }
+
+  /* Error finding */
+  .strat-error-step {
+    @apply w-full p-2.5 rounded-xl text-right transition-all;
+    border: 1px solid rgba(140, 237, 243, 0.1);
+  }
+  .strat-error-default {
+    background: rgba(0, 34, 56, 0.4);
+    cursor: pointer;
+  }
+  .strat-error-default:hover {
+    border-color: rgba(255, 200, 80, 0.4);
+    background: rgba(255, 200, 80, 0.05);
+  }
+  .strat-error-found {
+    background: rgba(255, 70, 70, 0.1) !important;
+    border-color: rgba(255, 70, 70, 0.5) !important;
+  }
+  .strat-error-wrong-guess {
+    background: rgba(255, 200, 80, 0.08) !important;
+    border-color: rgba(255, 200, 80, 0.3) !important;
+  }
+  .strat-error-ok {
+    background: rgba(90, 246, 214, 0.06);
+    border-color: rgba(90, 246, 214, 0.2);
+    opacity: 0.7;
+  }
+  .strat-error-badge {
+    @apply w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0;
+    background: rgba(140, 237, 243, 0.1);
+    border: 1px solid rgba(140, 237, 243, 0.2);
+    color: var(--color-primary);
+  }
+
+  /* Simpler comparison cards */
+  .strat-compare-card {
+    @apply p-3 rounded-xl text-center;
+    border: 1px solid rgba(140, 237, 243, 0.15);
+  }
+  .strat-compare-original {
+    background: rgba(0, 34, 56, 0.3);
+    border-style: dashed;
+  }
+  .strat-compare-simpler {
+    background: rgba(111, 209, 215, 0.08);
+    border-color: rgba(111, 209, 215, 0.3);
+    box-shadow: 0 0 15px rgba(111, 209, 215, 0.1);
+  }
+  .strat-compare-result {
+    background: rgba(90, 246, 214, 0.08);
+    border-color: rgba(90, 246, 214, 0.3);
+    box-shadow: 0 0 15px rgba(90, 246, 214, 0.1);
+  }
+
+  /* Concept cards */
+  .strat-concept-card {
+    @apply p-3 rounded-xl;
+    background: rgba(0, 34, 56, 0.4);
+    border: 1px solid rgba(111, 209, 215, 0.2);
+  }
+
+  /* Puzzle pieces */
+  .strat-puzzle-piece {
+    @apply p-2.5 rounded-xl transition-all cursor-grab active:cursor-grabbing;
+    background: rgba(0, 34, 56, 0.4);
+    border: 1px solid rgba(140, 237, 243, 0.15);
+  }
+  .strat-puzzle-piece:hover { border-color: rgba(140, 237, 243, 0.4); }
+  .strat-puzzle-correct {
+    background: rgba(90, 246, 214, 0.1) !important;
+    border-color: rgba(90, 246, 214, 0.4) !important;
+  }
+  .strat-puzzle-wrong {
+    background: rgba(255, 70, 70, 0.08) !important;
+    border-color: rgba(255, 70, 70, 0.4) !important;
+  }
+  .strat-puzzle-grip {
+    @apply text-on-surface-variant/30 text-sm cursor-grab;
+  }
+  .strat-puzzle-num {
+    @apply w-5 h-5 rounded text-[10px] font-bold flex items-center justify-center;
+    background: rgba(111, 209, 215, 0.2);
+    color: var(--color-primary);
+  }
+  .strat-puzzle-arrow {
+    @apply w-5 h-5 rounded flex items-center justify-center text-[8px] text-on-surface-variant/50 hover:text-primary transition-all;
+    background: rgba(140, 237, 243, 0.05);
+    border: 1px solid rgba(140, 237, 243, 0.1);
+  }
+  .strat-puzzle-arrow:disabled { @apply opacity-20 cursor-not-allowed; }
 }
